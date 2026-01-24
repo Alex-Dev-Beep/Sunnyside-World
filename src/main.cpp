@@ -158,7 +158,6 @@ int main() {
     }   
     GLFWwindow* window;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkQueue graphicsQueue;
     VkQueue presentQueue;
@@ -204,10 +203,10 @@ int main() {
     
     createWindow(800, 600, "Vulkan Window", window);
     glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-    createInstance(instance);
-    setupDebugMessenger(instance);
-    createSurface(instance, surface, window);
-    pickPhysicalDevice(instance, physicalDevice, surface);
+    createInstance();
+    setupDebugMessenger(Instance.instance);
+    createSurface(Instance.instance, surface, window);
+    pickPhysicalDevice(Instance.instance, physicalDevice, surface);
     createLogicalDevice(physicalDevice, surface, device, graphicsQueue, presentQueue);
     createSwapChain(physicalDevice, surface, window, swapChain, device, swapChainImages, swapChainImageFormat, swapChainExtent);
     createImageViews(swapChainImageViews, swapChainImages, swapChainImageFormat, device);
@@ -293,8 +292,8 @@ int main() {
     vkDestroyBuffer(device, indexBuffer, nullptr);
     vkFreeMemory(device, indexBufferMemory, nullptr);
     vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-    cleanupInstance(instance);
+    vkDestroySurfaceKHR(Instance.instance, surface, nullptr);
+    cleanupInstance(Instance.instance);
     glfwDestroyWindow(window);
     glfwTerminate();
 }

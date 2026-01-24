@@ -1,7 +1,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-void createInstance(VkInstance& instance);
+void createInstance();
 bool checkValidationLayerSupport();
 
 void setupDebugMessenger(VkInstance instance);
@@ -20,3 +20,10 @@ void DestroyDebugUtilsMessengerEXT(
 );
 
 void cleanupInstance(VkInstance instance);
+
+struct instance {
+    public:
+    VkInstance instance = VK_NULL_HANDLE;
+};
+
+extern instance Instance;
