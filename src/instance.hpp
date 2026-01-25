@@ -2,9 +2,9 @@
 #include <GLFW/glfw3.h>
 
 void createInstance();
+void setupDebugMessenger();
+void cleanupInstance();
 bool checkValidationLayerSupport();
-
-void setupDebugMessenger(VkInstance instance);
 
 VkResult CreateDebugUtilsMessengerEXT(
     VkInstance instance,
@@ -19,11 +19,10 @@ void DestroyDebugUtilsMessengerEXT(
     const VkAllocationCallbacks* allocator
 );
 
-void cleanupInstance(VkInstance instance);
-
 struct instance {
     public:
     VkInstance instance = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT debugMessenger;
 };
 
 extern instance Instance;

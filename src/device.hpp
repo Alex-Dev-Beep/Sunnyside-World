@@ -14,11 +14,26 @@ struct QueueFamilyIndices {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
+
+struct device {
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkQueue graphicsQueue;
+    VkQueue presentQueue;
+};
+
+struct queues {
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device = VK_NULL_HANDLE;
+    VkQueue graphicsQueue;
+    VkQueue presentQueue;
+};
+
 QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-void pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
+void pickPhysicalDevice();
 bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface);
-void createLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkDevice& device, VkQueue& graphicsQueue, VkQueue& presentQueue);
+void createLogicalDevice();
 void createCommandPool(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkCommandPool& commandPool, VkDevice device);
 void createCommandBuffer(VkCommandPool commandPool, VkDevice device, int MAX_FRAMES_IN_FLIGHT, std::vector<VkCommandBuffer>& commandBuffers);
 void recordCommandBuffer(
@@ -34,3 +49,6 @@ void recordCommandBuffer(
     VkPipelineLayout pipelineLayout,
     const std::vector<VkDescriptorSet>& descriptorSets
 );
+
+extern device Device;
+extern queues Queues;

@@ -2,12 +2,17 @@
 #include "validation_layers.hpp"
 #include "swapchain.hpp"
 #include "vertex.hpp"
+#include "instance.hpp"
+#include "surface.hpp"
 
 #include <stdexcept>
 #include <vector>
 #include <iostream>
 #include <string>
 #include <set>
+
+device Device;
+queues Queues;
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -71,8 +76,8 @@ bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
     return requiredExtensions.empty();
 }
 
-void createLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkDevice& device, VkQueue& graphicsQueue, VkQueue& presentQueue) {
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+void createLogicalDevice() {
+    QueueFamilyIndices indices = findQueueFamilies(Device.physicalDevice, Surface.surface);
 
     VkDeviceQueueCreateInfo queueCreateInfo{};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -102,14 +107,14 @@ void createLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, 
     } else {
         createInfo.enabledLayerCount = 0;
     }
-    if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+    if (vkCreateDevice(Device.physicalDevice, &createInfo, nullptr, &Device.device) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create logical device!");
     } else {
         std::cout << "Succesfully created Logical Device!" << std::endl;
     }
 
-    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(Device.device, indices.graphicsFamily.value(), 0, &Queues.graphicsQueue);
+    vkGetDeviceQueue(Device.device, indices.presentFamily.value(), 0, &Queues.presentQueue);
 
 }
 
@@ -134,37 +139,35 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-void pickPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice, VkSurfaceKHR surface) {
+void pickPhysicalDevice() {
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    vkEnumeratePhysicalDevices(Instance.instance, &deviceCount, nullptr);
 
     if (deviceCount == 0) {
         throw std::runtime_error("Failed to find GPUs with Vulkan support!");
     }
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+    vkEnumeratePhysicalDevices(Instance.instance, &deviceCount, devices.data());
     for (const auto& device : devices) {
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(device, &props);
 
-        std::cout << "Checking GPU: "
-                << props.deviceName << std::endl;
-
-        if (isDeviceSuitable(device, surface)) {
-            physicalDevice = device;
+        std::cout << "Checking GPU: " << props.deviceName << std::endl;
+        if (isDeviceSuitable(device, Surface.surface)) {
+            Device.physicalDevice = device;
             std::cout << "Selected GPU!" << std::endl;
             break;
         }
     }
 
 
-    if (physicalDevice == VK_NULL_HANDLE) {
+    if (Device.physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("Failed to find a suitable GPU!");
     }
 
     VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(physicalDevice, &props);
+    vkGetPhysicalDeviceProperties(Device.physicalDevice, &props);
     std::cout << "Using GPU: " << props.deviceName << std::endl;
 
 }

@@ -3,12 +3,14 @@
 #include <stdexcept>
 #include <iostream>
 
-void createWindow(int width, int height, const char* title, GLFWwindow*& window) {
+window Window;
+
+void createWindow() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    window = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    Window.window = glfwCreateWindow(Window.width, Window.height, Window.title, nullptr, nullptr);
 
-    if (!window) {
+    if (!Window.window) {
         throw std::runtime_error("Failed to create GLFW window!");
     }
 

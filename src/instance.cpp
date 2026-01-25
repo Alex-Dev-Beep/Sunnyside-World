@@ -14,15 +14,14 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-VkDebugUtilsMessengerEXT debugMessenger;
 instance Instance;
 
-void cleanupInstance(VkInstance instance) {
+void cleanupInstance() {
     if (enableValidationLayers) {
-        DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+        DestroyDebugUtilsMessengerEXT(Instance.instance, Instance.debugMessenger, nullptr);
     }
 
-    vkDestroyInstance(instance, nullptr);
+    vkDestroyInstance(Instance.instance, nullptr);
 }
 
 void createInstance() {
@@ -129,16 +128,18 @@ static void populateDebugMessengerCreateInfo(
 }
 
 
-void setupDebugMessenger(VkInstance instance) {
+void setupDebugMessenger() {
     if (!enableValidationLayers) return;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     populateDebugMessengerCreateInfo(createInfo);
 
     if (CreateDebugUtilsMessengerEXT(
-            instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+            Instance.instance, &createInfo, nullptr, &Instance.debugMessenger) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create debug messenger");
     }
+
+    std::cout << "Succesfully created debug messenger!" << std::endl;
 }
 
 VkResult CreateDebugUtilsMessengerEXT(
