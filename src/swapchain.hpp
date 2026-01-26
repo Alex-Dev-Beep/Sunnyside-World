@@ -1,5 +1,6 @@
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include "vertex.hpp"
 
@@ -11,6 +12,14 @@ struct SwapChainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes;
 };
 
+struct swapChain {
+    public:
+    VkSwapchainKHR swapChain;
+    VkFormat swapChainImageFormat;
+    VkExtent2D swapChainExtent;
+    std::vector<VkImage> swapChainImages;
+};
+
 SwapChainSupportDetails querySwapChainSupport(
     VkPhysicalDevice device, 
     VkSurfaceKHR surface
@@ -20,18 +29,11 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>
 
 VkExtent2D chooseSwapExtent(
     const VkSurfaceCapabilitiesKHR& capabilities, 
-    GLFWwindow* window
+    
+SDL_Window* window
 );
 
-void createSwapChain(VkPhysicalDevice physicalDevice, 
-    VkSurfaceKHR surface, 
-    GLFWwindow* window, 
-    VkSwapchainKHR& swapChain, 
-    VkDevice device, 
-    std::vector<VkImage>& swapChainImages, 
-    VkFormat& swapChainImageFormat, 
-    VkExtent2D& swapChainExtent
-);
+void createSwapChain();
 
 void createImageViews(
     std::vector<VkImageView>& swapChainImageViews, 
@@ -51,7 +53,7 @@ void cleanupSwapChain(
 );
 
 void recreateSwapChain(
-    GLFWwindow* window, 
+    SDL_Window* window, 
     VkDevice& device, 
     VkPhysicalDevice& physicalDevice, 
     VkSurfaceKHR& surface, 
@@ -79,3 +81,5 @@ void recreateSwapChain(
     VkDeviceMemory depthImageMemory, 
     VkImage depthImage
 );
+
+extern swapChain SwapChain;

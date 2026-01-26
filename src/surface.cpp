@@ -1,27 +1,24 @@
-#define GLFW_INCLUDE_VULKAN
-#define GLFW_EXPOSE_NATIVE_WIN32
-
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-
 #include "surface.hpp"
 #include "instance.hpp"
 #include "window.hpp"
 
+#include <SDL3/SDL_vulkan.h>
 #include <stdexcept>
 #include <iostream>
 
 surface Surface;
 
 void createSurface() {
-    VkWin32SurfaceCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    createInfo.hwnd = glfwGetWin32Window(Window.window);
-    createInfo.hinstance = GetModuleHandle(nullptr);
+    std::cout << "Creating Vulkan surface..." << std::endl;
 
-    if (vkCreateWin32SurfaceKHR(Instance.instance, &createInfo, nullptr, &Surface.surface) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create window surface!");
-    } else {
-        std::cout << "Succesfully created window surface!" << std::endl;
+    if (!SDL_Vulkan_CreateSurface(
+        Window.window,
+        Instance.instance,
+        nullptr,
+        &Surface.surface
+    )) {
+        throw std::runtime_error(SDL_GetError());
     }
+
+    std::cout << "Successfully created Vulkan surface!" << std::endl;
 }

@@ -140,6 +140,7 @@ bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
 }
 
 void pickPhysicalDevice() {
+    std::cout << Surface.surface << std::endl;
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(Instance.instance, &deviceCount, nullptr);
 

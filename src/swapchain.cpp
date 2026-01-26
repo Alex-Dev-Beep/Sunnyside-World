@@ -6,12 +6,16 @@
 #include "vertex.hpp"
 #include "image.hpp"
 #include "uniform.hpp"
+#include "surface.hpp"
+#include "window.hpp"
 
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+
+swapChain SwapChain;
 
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
     SwapChainSupportDetails details;
@@ -44,12 +48,13 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device, VkSurface
     return details;
 }
 
-VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window) {
+VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, 
+SDL_Window* window) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     } else {
         int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+        SDL_GetWindowSizeInPixels(window, &width, &height);
 
         VkExtent2D actualExtent = {
             static_cast<uint32_t>(width),
@@ -73,12 +78,12 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-void createSwapChain(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, GLFWwindow* window, VkSwapchainKHR& swapChain, VkDevice device, std::vector<VkImage>& swapChainImages, VkFormat& swapChainImageFormat, VkExtent2D& swapChainExtent) {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
+void createSwapChain() {
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(Device.physicalDevice, Surface.surface);
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
+    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, Window.window);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 
@@ -88,7 +93,7 @@ void createSwapChain(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, GLFW
 
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = surface;
+    createInfo.surface = Surface.surface;
 
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = surfaceFormat.format;
@@ -97,7 +102,7 @@ void createSwapChain(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, GLFW
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+    QueueFamilyIndices indices = findQueueFamilies(Device.physicalDevice, Surface.surface);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -119,18 +124,18 @@ void createSwapChain(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, GLFW
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = extent;
+    SwapChain.swapChainImageFormat = surfaceFormat.format;
+    SwapChain.swapChainExtent = extent;
 
-    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(Device.device, &createInfo, nullptr, &SwapChain.swapChain) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create swapchain!");
     } else {
         std::cout << "Succesfully created Swapchain!" << std::endl;
     }
     
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+    vkGetSwapchainImagesKHR(Device.device, SwapChain.swapChain, &imageCount, nullptr);
+    SwapChain.swapChainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(Device.device, SwapChain.swapChain, &imageCount, SwapChain.swapChainImages.data());
 }
 
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -154,20 +159,23 @@ void createImageViews(std::vector<VkImageView>& swapChainImageViews, std::vector
     }
 }
 
-void recreateSwapChain(GLFWwindow* window, VkDevice& device, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkSwapchainKHR& swapChain, int MAX_FRAMES_IN_FLIGHT, VkRenderPass& renderPass, VkCommandPool& commandPool, std::vector<VkCommandBuffer>& commandBuffers, VkExtent2D& swapChainExtent, std::vector<VkImage>& swapChainImages, VkFormat& swapChainImageFormat, std::vector<VkImageView>& swapChainImageViews, std::vector<VkFramebuffer>& swapChainFramebuffers, VkPipeline& graphicsPipeline, VkPipelineLayout& pipelineLayout, VkBuffer vertexBuffer, std::vector<Vertex> vertices, VkBuffer indexBuffer, const std::vector<uint16_t> indices, VkDescriptorSetLayout descriptorSetLayout, std::vector<VkDescriptorSet> descriptorSets, uint32_t currentFrame, VkQueue graphicsQueue, VkImageView depthImageView, VkDeviceMemory depthImageMemory, VkImage depthImage) {
+void recreateSwapChain(
+SDL_Window* window, VkDevice& device, VkPhysicalDevice& physicalDevice, VkSurfaceKHR& surface, VkSwapchainKHR& swapChain, int MAX_FRAMES_IN_FLIGHT, VkRenderPass& renderPass, VkCommandPool& commandPool, std::vector<VkCommandBuffer>& commandBuffers, VkExtent2D& swapChainExtent, std::vector<VkImage>& swapChainImages, VkFormat& swapChainImageFormat, std::vector<VkImageView>& swapChainImageViews, std::vector<VkFramebuffer>& swapChainFramebuffers, VkPipeline& graphicsPipeline, VkPipelineLayout& pipelineLayout, VkBuffer vertexBuffer, std::vector<Vertex> vertices, VkBuffer indexBuffer, const std::vector<uint16_t> indices, VkDescriptorSetLayout descriptorSetLayout, std::vector<VkDescriptorSet> descriptorSets, uint32_t currentFrame, VkQueue graphicsQueue, VkImageView depthImageView, VkDeviceMemory depthImageMemory, VkImage depthImage) {
+    SDL_Event e;    
+    
     int width = 0, height = 0;
-    glfwGetFramebufferSize(window, &width, &height);
+    SDL_GetWindowSizeInPixels(window, &width, &height);
 
     while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(window, &width, &height);
-        glfwWaitEvents();
+        SDL_GetWindowSizeInPixels(window, &width, &height);
+        SDL_WaitEvent(&e);
     }
 
     vkDeviceWaitIdle(device);
 
     cleanupSwapChain(device, renderPass, swapChainFramebuffers, commandPool, commandBuffers, swapChainImageViews, swapChain);
 
-    createSwapChain(physicalDevice, surface, window, swapChain, device, swapChainImages, swapChainImageFormat, swapChainExtent);
+    createSwapChain();
     createImageViews(swapChainImageViews, swapChainImages, swapChainImageFormat, device);
     createDepthResources(swapChainExtent, depthImageView, depthImage, depthImageMemory, device, physicalDevice, commandPool, graphicsQueue);
     createRenderPass(swapChainImageFormat, renderPass, device, physicalDevice);

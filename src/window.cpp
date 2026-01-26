@@ -6,13 +6,16 @@
 window Window;
 
 void createWindow() {
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    Window.window = glfwCreateWindow(Window.width, Window.height, Window.title, nullptr, nullptr);
+    Window.window = SDL_CreateWindow(
+        Window.title,
+        Window.width,
+        Window.height,
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+    );
 
     if (!Window.window) {
-        throw std::runtime_error("Failed to create GLFW window!");
+        throw std::runtime_error(SDL_GetError());
     }
 
-    std::cout << "Created GLFW window!" << std::endl;
+    std::cout << "Created SDL window!" << std::endl;
 }

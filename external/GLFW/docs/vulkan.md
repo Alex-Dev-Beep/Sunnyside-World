@@ -58,8 +58,9 @@ To have GLFW include the Vulkan header, define @ref GLFW_INCLUDE_VULKAN before i
 the GLFW header.
 
 ```c
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+#include <vulkan/vulkan.h>
 ```
 
 If you instead want to include the Vulkan header from a custom location or use

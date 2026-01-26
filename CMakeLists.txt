@@ -11,7 +11,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Vulkan REQUIRED)
 
-add_subdirectory(external/GLFW)
+set(SDL3_PATH "C:/libs/SDL3")
+
 add_subdirectory(external/glm)
 
 file(GLOB_RECURSE SRC_FILES
@@ -24,24 +25,21 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/external/stb
+        ${SDL3_PATH}/include
+)   
+
+target_link_directories(${PROJECT_NAME}
+    PRIVATE
+        ${SDL3_PATH}/lib/x64
 )
 
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        glfw
         Vulkan::Vulkan
         glm::glm
-
+        SDL3
 )
-
-
-if (WIN32)
-    target_compile_definitions(${PROJECT_NAME}
-        PRIVATE
-            VK_USE_PLATFORM_WIN32_KHR
-    )
-endif()
 
 find_program(GLSL_VALIDATOR glslangValidator
     HINTS

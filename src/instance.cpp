@@ -1,4 +1,5 @@
 #include "instance.hpp"
+#include "window.hpp"
 
 #include <iostream>
 #include <vector>
@@ -41,17 +42,24 @@ void createInstance() {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    Uint32 extensionCount = 0;
+
+    const char* const* sdlExtensions =
+        SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+
+    if (!sdlExtensions) {
+        throw std::runtime_error(SDL_GetError());
+    }
 
     std::vector<const char*> extensions(
-        glfwExtensions,
-        glfwExtensions + glfwExtensionCount
+        sdlExtensions,
+        sdlExtensions + extensionCount
     );
 
     if (enableValidationLayers) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+
 
     createInfo.enabledExtensionCount =
         static_cast<uint32_t>(extensions.size());
@@ -66,11 +74,12 @@ void createInstance() {
     }
 
     if (vkCreateInstance(&createInfo, nullptr, &Instance.instance) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create VkInstance!");
+        throw std::runtime_error("Failed to create VkInstance");
     }
 
-    std::cout << "Succesfully created VkInstance!" << std::endl;
+    std::cout << "Successfully created VkInstance!" << std::endl;
 }
+
 
 
 bool checkValidationLayerSupport() {

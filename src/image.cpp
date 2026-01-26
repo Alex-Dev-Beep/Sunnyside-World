@@ -243,7 +243,6 @@ VkImageView createImageView(VkImage image, VkFormat format, VkDevice device, VkI
 }
 
 void createTextureSampler(VkPhysicalDevice physicalDevice, VkSampler& textureSampler, VkDevice device) {
-    std::cout << "hey" << std::endl;
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(physicalDevice, &properties);
 
