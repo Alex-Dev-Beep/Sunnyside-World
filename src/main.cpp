@@ -174,7 +174,7 @@ void drawFrame(
 }
 
 int main() {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO)) {
         throw std::runtime_error("Failed to init SDL!");
     } else {
         std::cout << "Initialized SDL correctly!" << std::endl;
@@ -209,8 +209,23 @@ int main() {
     VkImageView depthImageView;
 
     SDL_Gamepad* pad = nullptr;
+
+    int gamepadCount = 0;
+    SDL_JoystickID* gamepads = SDL_GetGamepads(&gamepadCount);
+
+    if (gamepads && gamepadCount > 0) {
+        pad = SDL_OpenGamepad(gamepads[0]);
+        if (!pad) {
+            SDL_Log("Couldn't use gamepad: %s", SDL_GetError());
+        }
+    } else {
+        SDL_Log("No connected gamepads");
+    }
+
+    SDL_free(gamepads);
+
     glm::vec2 playerPos = {0.0f, 0.0f};
-    float speed = 1.5f; // unidades por segundo
+    float speed = 1.5f;
 
     createWindow();
     createInstance();
@@ -255,8 +270,7 @@ int main() {
 
     bool running = true;
     SDL_Event e;
-
-    bool playerIsMoving = false;
+    
     Uint64 lastCounter = SDL_GetPerformanceCounter();
     while (running) {
         Uint64 currentCounter = SDL_GetPerformanceCounter();
@@ -264,6 +278,7 @@ int main() {
         (currentCounter - lastCounter) /
         (float)SDL_GetPerformanceFrequency();
         lastCounter = currentCounter;
+
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_EVENT_QUIT)
                 running = false;
@@ -282,10 +297,15 @@ int main() {
 
             const float DEADZONE = 0.15f;
 
+            std::cout << lx << std::endl;
+            std::cout << ly << std::endl;
+
             if (fabs(lx) > DEADZONE)
                 playerPos.x += lx * speed * deltaTime;
             if (fabs(ly) > DEADZONE)
                 playerPos.y -= ly * speed * deltaTime;
+        } else {
+            std::cout << "No gamepad connected" << std::endl;
         }
 
         ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(playerPos, 0.0f));
