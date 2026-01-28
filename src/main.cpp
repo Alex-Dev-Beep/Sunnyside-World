@@ -304,8 +304,6 @@ int main() {
                 playerPos.x += lx * speed * deltaTime;
             if (fabs(ly) > DEADZONE)
                 playerPos.y -= ly * speed * deltaTime;
-        } else {
-            std::cout << "No gamepad connected" << std::endl;
         }
 
         ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(playerPos, 0.0f));
@@ -346,8 +344,6 @@ int main() {
         );
     }
 
-    
-    // TODO: Fix cleanup
     vkDeviceWaitIdle(Device.device);   
     for (size_t i = 0; i < FlightFrames.MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(Device.device, renderFinishedSemaphores[i], nullptr);
@@ -355,9 +351,8 @@ int main() {
         vkDestroyFence(Device.device, inFlightFences[i], nullptr);
     }
 
-    vkDestroyCommandPool(Device.device, commandPool, nullptr);
-    vkDestroyPipelineLayout(Device.device, pipelineLayout, nullptr);
     cleanupSwapChain(Device.device, RenderPass.renderPass, swapChainFramebuffers, commandPool, commandBuffers, SwapChain.swapChainImageViews, SwapChain.swapChain);
+    vkDestroyCommandPool(Device.device, commandPool, nullptr);
     vkDestroyImageView(Device.device, depthImageView, nullptr);
     vkDestroyImage(Device.device, depthImage, nullptr);
     vkFreeMemory(Device.device, depthImageMemory, nullptr);
@@ -375,11 +370,13 @@ int main() {
     vkFreeMemory(Device.device, vertexBufferMemory, nullptr);
     vkDestroyBuffer(Device.device, indexBuffer, nullptr);
     vkFreeMemory(Device.device, indexBufferMemory, nullptr);
+    vkDestroyPipelineLayout(Device.device, Pipeline.pipelineLayout, nullptr);
+    vkDestroyPipeline(Device.device, Pipeline.graphicsPipeline, nullptr);
     vkDestroyDevice(Device.device, nullptr);
     vkDestroySurfaceKHR(Instance.instance, Surface.surface, nullptr);
     cleanupInstance();
     SDL_DestroyWindow(Window.window);
-    // SDL_Terminate
+    SDL_Quit();
     return 0;
 }
 
