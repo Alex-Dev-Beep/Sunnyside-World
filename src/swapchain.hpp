@@ -18,6 +18,7 @@ struct swapChain {
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
     std::vector<VkImage> swapChainImages;
+    std::vector<VkImageView> swapChainImageViews;
 };
 
 SwapChainSupportDetails querySwapChainSupport(
@@ -35,12 +36,7 @@ SDL_Window* window
 
 void createSwapChain();
 
-void createImageViews(
-    std::vector<VkImageView>& swapChainImageViews, 
-    std::vector<VkImage>& swapChainImages, 
-    VkFormat swapChainImageFormat, 
-    VkDevice device
-);
+void createImageViews();
 
 void cleanupSwapChain(
     VkDevice& device, 

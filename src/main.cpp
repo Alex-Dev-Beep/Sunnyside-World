@@ -1,5 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL_joystick.h>
+#include <SDL3/SDL_keyboard.h>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
@@ -17,6 +19,8 @@
 #include "vertex.hpp"
 #include "uniform.hpp"
 #include "image.hpp"
+#include "flight.hpp"
+#include "render_pass.hpp"
 
 // document everything
 
@@ -72,7 +76,8 @@ void drawFrame(
     VkImage& depthImage,
     VkDeviceMemory& depthImageMemory,
     VkImageView& depthImageView,
-    std::vector<VkFence>& imagesInFlight
+    std::vector<VkFence>& imagesInFlight,
+    UniformBufferObject ubo
 )
  {
     vkWaitForFences(
@@ -109,7 +114,8 @@ void drawFrame(
 
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-    updateUniformBuffer(currentFrame, uniformBuffersMapped, swapChainExtent);
+    updateUniformBuffer(imageIndex, uniformBuffersMapped, swapChainExtent, ubo);
+
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -168,17 +174,12 @@ void drawFrame(
 }
 
 int main() {
-    std::cout << "hey" << std::endl;
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK)) {
         throw std::runtime_error("Failed to init SDL!");
     } else {
         std::cout << "Initialized SDL correctly!" << std::endl;
     }
-    std::vector<VkFence> imagesInFlight;
-    std::vector<VkImageView> swapChainImageViews;
     VkPipelineLayout pipelineLayout;
-    VkDescriptorSetLayout descriptorSetLayout;
-    VkRenderPass renderPass;
     VkPipeline graphicsPipeline;
     std::vector<VkFramebuffer> swapChainFramebuffers;
     VkCommandPool commandPool;
@@ -189,9 +190,8 @@ int main() {
     
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
-    std::vector<void*> uniformBuffersMapped;    
-    std::vector<VkDescriptorSet> descriptorSets;    
-    const int MAX_FRAMES_IN_FLIGHT = 2; 
+    std::vector<void*> uniformBuffersMapped;
+    std::vector<VkDescriptorSet> descriptorSets;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
     VkBuffer indexBuffer;
@@ -202,10 +202,16 @@ int main() {
     VkImageView textureImageView;
     VkSampler textureSampler;
 
+    UniformBufferObject ubo{};
+
     VkImage depthImage;
     VkDeviceMemory depthImageMemory;
     VkImageView depthImageView;
-    
+
+    SDL_Gamepad* pad = nullptr;
+    glm::vec2 playerPos = {0.0f, 0.0f};
+    float speed = 1.5f; // unidades por segundo
+
     createWindow();
     createInstance();
     setupDebugMessenger();
@@ -213,28 +219,27 @@ int main() {
     pickPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
-    imagesInFlight.resize(SwapChain.swapChainImages.size(), VK_NULL_HANDLE);
-    createImageViews(swapChainImageViews, SwapChain.swapChainImages, SwapChain.swapChainImageFormat, Device.device);
-    createRenderPass(SwapChain.swapChainImageFormat, renderPass, Device.device, Device.physicalDevice);
-    createDescriptorSetLayout(Device.device, descriptorSetLayout);
-    createGraphicsPipeline(Device.device, SwapChain.swapChainExtent, pipelineLayout, renderPass, graphicsPipeline, descriptorSetLayout);
+    createImageViews();
+    createRenderPass();
+    createDescriptorSetLayout();
+    createGraphicsPipeline();
     createCommandPool(Device.physicalDevice, Surface.surface, commandPool, Device.device);
     createDepthResources(SwapChain.swapChainExtent, depthImageView, depthImage, depthImageMemory, Device.device, Device.physicalDevice, commandPool, Queues.graphicsQueue);
-    createFramebuffers(swapChainFramebuffers, swapChainImageViews, renderPass, SwapChain.swapChainExtent, Device.device, depthImageView);
+    createFramebuffers(swapChainFramebuffers, SwapChain.swapChainImageViews, RenderPass.renderPass, SwapChain.swapChainExtent, Device.device, depthImageView);
     createTextureImage(Device.physicalDevice, Device.device, textureImage, textureImageMemory, Queues.graphicsQueue, commandPool);
     createTextureImageView(Device.device, textureImage, textureImageView);
     createTextureSampler(Device.physicalDevice, textureSampler, Device.device);
     createVertexBuffer(Device.physicalDevice, Device.device, commandPool, Queues.graphicsQueue, vertexBuffer, vertexBufferMemory, vertices);
-    createUniformBuffers(MAX_FRAMES_IN_FLIGHT, Device.device, uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, Device.physicalDevice);
-    createDescriptorPool(MAX_FRAMES_IN_FLIGHT, descriptorPool, Device.device);
-    createDescriptorSets(MAX_FRAMES_IN_FLIGHT, descriptorPool, descriptorSetLayout, descriptorSets, Device.device, uniformBuffers, textureSampler, textureImageView);
+    createUniformBuffers(FlightFrames.MAX_FRAMES_IN_FLIGHT, Device.device, uniformBuffers, uniformBuffersMemory, uniformBuffersMapped, Device.physicalDevice);
+    createDescriptorPool(FlightFrames.MAX_FRAMES_IN_FLIGHT, descriptorPool, Device.device);
+    createDescriptorSets(FlightFrames.MAX_FRAMES_IN_FLIGHT, descriptorPool, DescriptorSetLayouts.descriptorSetLayout, descriptorSets, Device.device, uniformBuffers, textureSampler, textureImageView);
     createIndexBuffer(Device.physicalDevice, Device.device, commandPool, Queues.graphicsQueue, indexBuffer, indexBufferMemory, indices);
     createCommandBuffer(commandPool, Device.device, SwapChain.swapChainImages.size(), commandBuffers);   
     for (size_t i = 0; i < commandBuffers.size(); i++) {
         recordCommandBuffer(
             commandBuffers[i],
             static_cast<uint32_t>(i),
-            renderPass,
+            RenderPass.renderPass,
             swapChainFramebuffers,
             SwapChain.swapChainExtent,
             graphicsPipeline,
@@ -246,29 +251,49 @@ int main() {
         );
 
     }
-    createSyncObjects(Device.device, imageAvailableSemaphores, renderFinishedSemaphores, inFlightFences, MAX_FRAMES_IN_FLIGHT);
+    createSyncObjects(Device.device, imageAvailableSemaphores, renderFinishedSemaphores, inFlightFences, FlightFrames.MAX_FRAMES_IN_FLIGHT);
 
     bool running = true;
-
     SDL_Event e;
 
+    bool playerIsMoving = false;
+    Uint64 lastCounter = SDL_GetPerformanceCounter();
     while (running) {
-
+        Uint64 currentCounter = SDL_GetPerformanceCounter();
+        float deltaTime =
+        (currentCounter - lastCounter) /
+        (float)SDL_GetPerformanceFrequency();
+        lastCounter = currentCounter;
         while (SDL_PollEvent(&e)) {
-
-            if (e.type == SDL_EVENT_QUIT) {
+            if (e.type == SDL_EVENT_QUIT)
                 running = false;
-            }
-
-            if (e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-                framebufferResized = true;
-            }
         }
 
+        const bool* keys = SDL_GetKeyboardState(NULL);
+
+        if (keys[SDL_SCANCODE_W]) playerPos.y += speed * deltaTime;
+        if (keys[SDL_SCANCODE_S]) playerPos.y -= speed * deltaTime;
+        if (keys[SDL_SCANCODE_A]) playerPos.x -= speed * deltaTime;
+        if (keys[SDL_SCANCODE_D]) playerPos.x += speed * deltaTime;
+
+        if (pad) {
+            float lx = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
+            float ly = SDL_GetGamepadAxis(pad, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
+
+            const float DEADZONE = 0.15f;
+
+            if (fabs(lx) > DEADZONE)
+                playerPos.x += lx * speed * deltaTime;
+            if (fabs(ly) > DEADZONE)
+                playerPos.y -= ly * speed * deltaTime;
+        }
+
+        ubo.model = glm::translate(glm::mat4(1.0f), glm::vec3(playerPos, 0.0f));
+        
         drawFrame(
             Device.device,
             SwapChain.swapChain,
-            renderPass,
+            RenderPass.renderPass,
             swapChainFramebuffers,
             SwapChain.swapChainExtent,
             graphicsPipeline,
@@ -278,39 +303,41 @@ int main() {
             renderFinishedSemaphores,
             imageAvailableSemaphores,
             commandBuffers,
-            MAX_FRAMES_IN_FLIGHT,
+            FlightFrames.MAX_FRAMES_IN_FLIGHT,
             Surface.surface,
             Window.window,
             Device.physicalDevice,
             commandPool,
             SwapChain.swapChainImageFormat,
             SwapChain.swapChainImages,
-            swapChainImageViews,
+            SwapChain.swapChainImageViews,
             pipelineLayout,
             vertexBuffer,
             vertices,
             indexBuffer,
-            descriptorSetLayout,
+            DescriptorSetLayouts.descriptorSetLayout,
             uniformBuffersMapped,
             descriptorSets,
             depthImage,
             depthImageMemory,
             depthImageView,
-            imagesInFlight
+            FlightFrames.imagesInFlight,
+            ubo
         );
     }
 
     
     // TODO: Fix cleanup
     vkDeviceWaitIdle(Device.device);   
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < FlightFrames.MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(Device.device, renderFinishedSemaphores[i], nullptr);
         vkDestroySemaphore(Device.device, imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(Device.device, inFlightFences[i], nullptr);
     }
+
     vkDestroyCommandPool(Device.device, commandPool, nullptr);
     vkDestroyPipelineLayout(Device.device, pipelineLayout, nullptr);
-    cleanupSwapChain(Device.device, renderPass, swapChainFramebuffers, commandPool, commandBuffers, swapChainImageViews, SwapChain.swapChain);
+    cleanupSwapChain(Device.device, RenderPass.renderPass, swapChainFramebuffers, commandPool, commandBuffers, SwapChain.swapChainImageViews, SwapChain.swapChain);
     vkDestroyImageView(Device.device, depthImageView, nullptr);
     vkDestroyImage(Device.device, depthImage, nullptr);
     vkFreeMemory(Device.device, depthImageMemory, nullptr);
@@ -318,12 +345,12 @@ int main() {
     vkDestroyImageView(Device.device, textureImageView, nullptr);
     vkDestroyImage(Device.device, textureImage, nullptr);
     vkFreeMemory(Device.device, textureImageMemory, nullptr);         
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < FlightFrames.MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(Device.device, uniformBuffers[i], nullptr);
         vkFreeMemory(Device.device, uniformBuffersMemory[i], nullptr);
     }
     vkDestroyDescriptorPool(Device.device, descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(Device.device, descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(Device.device, DescriptorSetLayouts.descriptorSetLayout, nullptr);
     vkDestroyBuffer(Device.device, vertexBuffer, nullptr);
     vkFreeMemory(Device.device, vertexBufferMemory, nullptr);
     vkDestroyBuffer(Device.device, indexBuffer, nullptr);

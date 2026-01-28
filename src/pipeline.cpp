@@ -1,10 +1,15 @@
 #include "pipeline.hpp"
 #include "vertex.hpp"
-#include "uniform.hpp"  
+#include "uniform.hpp"
+#include "device.hpp"
+#include "swapchain.hpp"
+#include "render_pass.hpp"
 
 #include <fstream>
 #include <vector>
 #include <iostream>
+
+pipeline Pipeline;
 
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -42,12 +47,12 @@ VkShaderModule createShaderModule(const std::vector<char>& code, VkDevice device
     return shaderModule;
 }
 
-void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkPipelineLayout& pipelineLayout, VkRenderPass renderPass, VkPipeline& graphicsPipeline, VkDescriptorSetLayout descriptorSetLayout) {
+void createGraphicsPipeline() {
     auto vertShaderCode = readFile("shaders/vert.spv");
     auto fragShaderCode = readFile("shaders/frag.spv");
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, device);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, device);
+    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, Device.device);
+    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, Device.device);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -152,9 +157,9 @@ void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkPipel
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pSetLayouts = &DescriptorSetLayouts.descriptorSetLayout;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(Device.device, &pipelineLayoutInfo, nullptr, &Pipeline.pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout!");
     } else {
         std::cout << "Succesfully created pipeline layout!" << std::endl;
@@ -171,30 +176,25 @@ void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkPipel
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.layout = Pipeline.pipelineLayout;
+    pipelineInfo.renderPass = RenderPass.renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.pDepthStencilState = &depthStencil;
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(Device.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &Pipeline.graphicsPipeline) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create graphics pipeline!");
     } else {
         std::cout << "Succesfully created graphics pipeline" << std::endl;
     }   
 
-    vkDestroyShaderModule(device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+    vkDestroyShaderModule(Device.device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(Device.device, vertShaderModule, nullptr);
 }
 
-void createRenderPass(
-    VkFormat swapChainImageFormat,
-    VkRenderPass& renderPass,
-    VkDevice device,
-    VkPhysicalDevice physicalDevice
-) {
+void createRenderPass() {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapChainImageFormat;
+    colorAttachment.format = SwapChain.swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -204,7 +204,7 @@ void createRenderPass(
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = findDepthFormat(physicalDevice);
+    depthAttachment.format = findDepthFormat(Device.physicalDevice);
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -239,7 +239,7 @@ void createRenderPass(
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
 
-    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(Device.device, &renderPassInfo, nullptr, &RenderPass.renderPass) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create render pass!");
     }
 

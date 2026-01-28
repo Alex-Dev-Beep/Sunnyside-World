@@ -4,6 +4,7 @@
 #include "vertex.hpp"
 #include "instance.hpp"
 #include "surface.hpp"
+#include "pipeline.hpp"
 
 #include <stdexcept>
 #include <vector>
@@ -253,7 +254,7 @@ void recordCommandBuffer(
     vkCmdBindPipeline(
         commandBuffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        graphicsPipeline
+        Pipeline.graphicsPipeline
     );
 
     VkBuffer vertexBuffers[] = { vertexBuffer };
@@ -286,7 +287,7 @@ void recordCommandBuffer(
     vkCmdBindDescriptorSets(
         commandBuffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout,
+        Pipeline.pipelineLayout,
         0,
         1,
         &descriptorSets[imageIndex],

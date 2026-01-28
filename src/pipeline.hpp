@@ -3,8 +3,13 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
-void createGraphicsPipeline(VkDevice device, VkExtent2D swapChainExtent, VkPipelineLayout& pipelineLayout, VkRenderPass renderPass, VkPipeline& graphicsPipeline, VkDescriptorSetLayout descriptorSetLayout);
-void createRenderPass(VkFormat swapChainImageFormat, VkRenderPass& renderPass, VkDevice device, VkPhysicalDevice physicalDevice);
+struct pipeline {
+    VkPipelineLayout pipelineLayout;
+    VkPipeline graphicsPipeline;
+};
+
+void createGraphicsPipeline();
+void createRenderPass();
 void createFramebuffers(
     std::vector<VkFramebuffer>& swapChainFramebuffers,
     const std::vector<VkImageView>& swapChainImageViews,
@@ -13,3 +18,5 @@ void createFramebuffers(
     VkDevice device,
     VkImageView depthImageView
 );
+
+extern pipeline Pipeline;

@@ -1,6 +1,7 @@
 #include "uniform.hpp"
 #include "vertex.hpp"
 #include "image.hpp"
+#include "device.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -9,7 +10,9 @@
 #include <stdexcept>
 #include <iostream>
 
-void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout& descriptorSetLayout) {
+descriptorSetLayouts DescriptorSetLayouts;
+
+void createDescriptorSetLayout() {
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -30,9 +33,7 @@ void createDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout& descripto
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    
-
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(Device.device, &layoutInfo, nullptr, &DescriptorSetLayouts.descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create descriptor set layout!");
     } else {
         std::cout << "Succesfully created descriptor set layout!" << std::endl;
@@ -62,12 +63,11 @@ void createUniformBuffers(int MAX_FRAMES_IN_FLIGHT,
 
 void updateUniformBuffer(
     uint32_t currentImage,
-    std::vector<void*> uniformBuffersMapped,
-    VkExtent2D swapChainExtent
+    std::vector<void*>& uniformBuffersMapped,
+    VkExtent2D swapChainExtent,
+    UniformBufferObject& ubo
 ) {
-    UniformBufferObject ubo{};
 
-    ubo.model = glm::mat4(1.0f);
     ubo.view  = glm::mat4(1.0f);
 
     float aspect =

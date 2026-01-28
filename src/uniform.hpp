@@ -15,10 +15,12 @@ struct UniformBufferObject {
     glm::mat4 proj;
 };
 
-void createDescriptorSetLayout(
-    VkDevice device, 
-    VkDescriptorSetLayout& descriptorSetLayout
-);
+struct descriptorSetLayouts {
+    VkDescriptorSetLayout descriptorSetLayout;
+};
+
+void createDescriptorSetLayout();
+
 void createUniformBuffers(
     int MAX_FRAMES_IN_FLIGHT, 
     VkDevice device, 
@@ -29,8 +31,9 @@ void createUniformBuffers(
 );
 void updateUniformBuffer(
     uint32_t currentImage, 
-    std::vector<void*> uniformBuffersMapped, 
-    VkExtent2D swapChainExtent
+    std::vector<void*>& uniformBuffersMapped, 
+    VkExtent2D swapChainExtent,
+    UniformBufferObject& ubo
 );
 void createDescriptorPool(
     int MAX_FRAMES_IN_FLIGHT, 
@@ -61,3 +64,5 @@ VkFormat findSupportedFormat(
 VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
 
 bool hasStencilComponent(VkFormat format);
+
+extern descriptorSetLayouts DescriptorSetLayouts;
